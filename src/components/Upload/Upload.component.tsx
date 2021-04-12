@@ -11,8 +11,8 @@ const App: React.FC = () => {
   // all blobs in container
   const [blobList, setBlobList] = useState<string[]>([]);
   // current file to upload into container
-  const [fileSelected, setFileSelected] = useState<File | null>(null);
-  const [fileName, setFileName] = useState<string>('Please, select a file...');
+  const [filesSelected, setFilesSelected] = useState<FileList | null>(null);
+  const [fileName, setFileName] = useState<string[]>([]);
   const [isDraft, setIsDraft] = useState<boolean>(false);
   // UI/form management
   const [uploading, setUploading] = useState(false);
@@ -20,11 +20,15 @@ const App: React.FC = () => {
 
   const onFileChange = (files: FileList | null) => {
     // capture file into state
+    let fileNames:string[] = [];
     if (files != null) {
-      setFileSelected(files[0]);
-      setFileName(files[0].name);
+      setFilesSelected(files);
+      for (let index = 0; index < files.length; index++) {
+        fileNames.push(files[index].name)
+      }
+      setFileName(fileNames);
 
-      setIsDraft(true);
+      //setIsDraft(true);
 
       const setFileAsDraftCosmosDB = async () => {
         const metadata = {
@@ -40,7 +44,7 @@ const App: React.FC = () => {
         });
         const content = await rawResponse.json();
       };
-      setFileAsDraftCosmosDB();
+      //setFileAsDraftCosmosDB();
       
       setTimeout(() => {
         setIsDraft(false);
@@ -52,14 +56,34 @@ const App: React.FC = () => {
     // prepare UI
     setUploading(true);
 
+    let promise : Promise<string>[] = [];
+    
     // *** UPLOAD TO AZURE STORAGE ***
-    const blobsInContainer: string[] = await uploadFileToBlob(fileSelected);
+    const blobsInContainer: string[] = [];
+    if(filesSelected !== null)
+    {
+      for (let index = 0; index < filesSelected!.length; index++) {
+        
+        let newPromise: Promise<string> = new Promise((resolve, reject) => {
+          uploadFileToBlob(filesSelected[index])
+        });
+        promise.push(newPromise);
+
+
+        // let r: string[] = await uploadFileToBlob(filesSelected[index])
+        // blobsInContainer.push(r[0])   
+      }
+
+      Promise.all(promise).then((values) => {
+        console.log(values);
+      });
+    }
 
     // prepare UI for results
     setBlobList(blobsInContainer);
 
     // reset state/form
-    setFileSelected(null);
+    setFilesSelected(null);
     setUploading(false);
     setInputKey(Math.random().toString(36));
   };
@@ -71,6 +95,7 @@ const App: React.FC = () => {
         <Col>
           <Form.File 
             custom 
+            multiple
             type="file" 
             label={fileName} 
             id="fileMainInput" 
