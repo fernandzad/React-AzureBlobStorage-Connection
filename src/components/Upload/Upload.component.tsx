@@ -1,22 +1,33 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 import { Button, Container, Row, Col, Form, Alert } from 'react-bootstrap';
 
 import uploadFileToBlob, { isStorageConfigured } from '../../services/azure-storage-blob';
+import { getSasToken } from '../../services/SasTokenGenerator';
 import { AssetList } from '../AssetList';
-
-const storageConfigured = isStorageConfigured();
 
 const App: React.FC = () => {
   // all blobs in container
   const [blobList, setBlobList] = useState<string[]>([]);
+  const [sasToken, setSasToken] = useState<string>('');
   // current file to upload into container
   const [filesSelected, setFilesSelected] = useState<FileList | null>(null);
   const [fileName, setFileName] = useState<string[]>([]);
   const [isDraft, setIsDraft] = useState<boolean>(false);
   // UI/form management
+  const [storageConfigured, setStorageConfigured] = useState<boolean>(false);
   const [uploading, setUploading] = useState(false);
   const [inputKey, setInputKey] = useState(Math.random().toString(36));
+
+  useEffect(() => {
+    const retrieveSasToken = async () => {
+      const token = await getSasToken();
+      setSasToken(token);
+      setStorageConfigured(isStorageConfigured(token));
+    }
+
+    retrieveSasToken();
+  }, []);
 
   const onFileChange = (files: FileList | null) => {
     // capture file into state
@@ -24,27 +35,27 @@ const App: React.FC = () => {
     if (files != null) {
       setFilesSelected(files);
       for (let index = 0; index < files.length; index++) {
-        fileNames.push(files[index].name)
+        fileNames.push(`${files[index].name} `);
       }
       setFileName(fileNames);
 
-      //setIsDraft(true);
+      setIsDraft(true);
 
-      // const setFileAsDraftCosmosDB = async () => {
-      //   const metadata = {
-      //     status: 'draft'
-      //   }
-      //   const rawResponse = await fetch('http://localhost:7071/api/DraftJobTrigger', {
-      //     method: 'POST',
-      //     headers: {
-      //       'Accept': 'application/json',
-      //       'Content-Type': 'application/json',
-      //     },
-      //     body: JSON.stringify(metadata)
-      //   });
-      //   const content = await rawResponse.json();
-      // };
-      //setFileAsDraftCosmosDB();
+      const setFileAsDraftCosmosDB = async () => {
+        const metadata = {
+          status: 'draft'
+        }
+        const rawResponse = await fetch(process.env.REACT_APP_DRAFT_ENDPOINT || '', {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(metadata)
+        });
+        const content = await rawResponse.json();
+      };
+      setFileAsDraftCosmosDB();
       
       setTimeout(() => {
         setIsDraft(false);
@@ -53,26 +64,13 @@ const App: React.FC = () => {
   };
 
   const onFileUpload = async () => {
-    // prepare UI
     setUploading(true);
 
-    // let promises : Promise<string>[] = [];
-    
-    // *** UPLOAD TO AZURE STORAGE ***
     const blobsInContainer: string[] = [];
     for (let index = 0; index < filesSelected!.length; index++) {
-      // let newPromise: Promise<string> = new Promise((resolve, reject) => {
-      //   console.log("RESOLVE", { resolve });
-      //   console.log("REJECT", { reject });
-      //   uploadFileToBlob(filesSelected![index]);
-      // });
-      // promises.push(newPromise);
-      let r: string[] = await uploadFileToBlob(filesSelected![index]);
-      blobsInContainer.push(r[0]);
+      let response: string[] = await uploadFileToBlob(filesSelected![index], sasToken);
+      blobsInContainer.push(response[0]);
     }
-
-    // const returned: string[] = await Promise.all(promises);
-    // console.log("RETURNED VALUES", returned);
 
     setUploading(false);
     // prepare UI for results
@@ -117,7 +115,7 @@ const App: React.FC = () => {
           {isDraft && <Alert variant="success">Draft!</Alert>}
           <br />
           {storageConfigured && !uploading && <DisplayForm />}
-          {storageConfigured && uploading && <Alert variant="warning">Uploading</Alert>}
+          {storageConfigured && uploading && <Alert variant="warning">Uploading...</Alert>}
         </Col>
       </Row>
       <Row>
