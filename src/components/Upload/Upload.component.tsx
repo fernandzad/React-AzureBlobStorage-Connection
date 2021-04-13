@@ -30,20 +30,20 @@ const App: React.FC = () => {
 
       //setIsDraft(true);
 
-      const setFileAsDraftCosmosDB = async () => {
-        const metadata = {
-          status: 'draft'
-        }
-        const rawResponse = await fetch('http://localhost:7071/api/DraftJobTrigger', {
-          method: 'POST',
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(metadata)
-        });
-        const content = await rawResponse.json();
-      };
+      // const setFileAsDraftCosmosDB = async () => {
+      //   const metadata = {
+      //     status: 'draft'
+      //   }
+      //   const rawResponse = await fetch('http://localhost:7071/api/DraftJobTrigger', {
+      //     method: 'POST',
+      //     headers: {
+      //       'Accept': 'application/json',
+      //       'Content-Type': 'application/json',
+      //     },
+      //     body: JSON.stringify(metadata)
+      //   });
+      //   const content = await rawResponse.json();
+      // };
       //setFileAsDraftCosmosDB();
       
       setTimeout(() => {
@@ -56,35 +56,30 @@ const App: React.FC = () => {
     // prepare UI
     setUploading(true);
 
-    let promise : Promise<string>[] = [];
+    // let promises : Promise<string>[] = [];
     
     // *** UPLOAD TO AZURE STORAGE ***
     const blobsInContainer: string[] = [];
-    if(filesSelected !== null)
-    {
-      for (let index = 0; index < filesSelected!.length; index++) {
-        
-        let newPromise: Promise<string> = new Promise((resolve, reject) => {
-          uploadFileToBlob(filesSelected[index])
-        });
-        promise.push(newPromise);
-
-
-        // let r: string[] = await uploadFileToBlob(filesSelected[index])
-        // blobsInContainer.push(r[0])   
-      }
-
-      Promise.all(promise).then((values) => {
-        console.log(values);
-      });
+    for (let index = 0; index < filesSelected!.length; index++) {
+      // let newPromise: Promise<string> = new Promise((resolve, reject) => {
+      //   console.log("RESOLVE", { resolve });
+      //   console.log("REJECT", { reject });
+      //   uploadFileToBlob(filesSelected![index]);
+      // });
+      // promises.push(newPromise);
+      let r: string[] = await uploadFileToBlob(filesSelected![index]);
+      blobsInContainer.push(r[0]);
     }
 
+    // const returned: string[] = await Promise.all(promises);
+    // console.log("RETURNED VALUES", returned);
+
+    setUploading(false);
     // prepare UI for results
     setBlobList(blobsInContainer);
 
     // reset state/form
     setFilesSelected(null);
-    setUploading(false);
     setInputKey(Math.random().toString(36));
   };
 
