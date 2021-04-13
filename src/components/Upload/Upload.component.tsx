@@ -4,6 +4,9 @@ import { Button, Container, Row, Col, Form, Alert } from 'react-bootstrap';
 
 import uploadFileToBlob, { isStorageConfigured } from '../../services/azure-storage-blob';
 import { getSasToken } from '../../services/SasTokenGenerator';
+import { Response } from '../../services/types/SasTokenGenerator.types';
+
+import { DisplayForm } from '../DisplayForm';
 import { AssetList } from '../AssetList';
 
 const App: React.FC = () => {
@@ -21,9 +24,9 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const retrieveSasToken = async () => {
-      const token = await getSasToken();
-      setSasToken(token);
-      setStorageConfigured(isStorageConfigured(token));
+      const response: Response = await getSasToken();
+      setSasToken(response.Token);
+      setStorageConfigured(isStorageConfigured(response.Token));
     }
 
     retrieveSasToken();
@@ -53,7 +56,7 @@ const App: React.FC = () => {
           },
           body: JSON.stringify(metadata)
         });
-        const content = await rawResponse.json();
+        // const content = await rawResponse.json();
       };
       setFileAsDraftCosmosDB();
       
@@ -81,31 +84,6 @@ const App: React.FC = () => {
     setInputKey(Math.random().toString(36));
   };
 
-  // display form
-  const DisplayForm = () => (
-    <Container>
-      <Row>
-        <Col>
-          <Form.File 
-            custom 
-            multiple
-            type="file" 
-            label={fileName} 
-            id="fileMainInput" 
-            onChange={(e: { target: { files: FileList | null; }; }) => onFileChange(e.target.files)} 
-            key={inputKey || ''}>
-          </Form.File>
-        </Col>
-      </Row>
-      <Row>
-        <Col>
-          <br/>
-          <Button variant="success" type="submit" onClick={onFileUpload}>Upload</Button>
-        </Col>
-      </Row>
-    </Container>
-  )
-
   return (
     <Container className="mt-5">
       <Row>
@@ -114,7 +92,8 @@ const App: React.FC = () => {
           <br/>
           {isDraft && <Alert variant="success">Draft!</Alert>}
           <br />
-          {storageConfigured && !uploading && <DisplayForm />}
+          {storageConfigured && !uploading && <DisplayForm fileName={fileName} 
+            inputKey={inputKey} onFileChange={onFileChange} onFileUpload={onFileUpload}/>}
           {storageConfigured && uploading && <Alert variant="warning">Uploading...</Alert>}
         </Col>
       </Row>
