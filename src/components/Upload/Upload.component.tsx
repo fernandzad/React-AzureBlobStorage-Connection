@@ -69,13 +69,33 @@ const App: React.FC = () => {
   const onFileUpload = async () => {
     setUploading(true);
 
+    // VERSION FOR SYNCHRONOUS UPLOADING
+    // const blobsInContainer: string[] = [];
+    // for (let index = 0; index < filesSelected!.length; index++) {
+    //   let response: string[] = await uploadFileToBlob(filesSelected![index], sasToken);
+    //   blobsInContainer.push(response[0]);
+    // }
+
+    let promises : Promise<string>[] = [];
     const blobsInContainer: string[] = [];
-    for (let index = 0; index < filesSelected!.length; index++) {
-      let response: string[] = await uploadFileToBlob(filesSelected![index], sasToken);
-      blobsInContainer.push(response[0]);
+    if(filesSelected !== null)
+    {
+      for (let index = 0; index < filesSelected!.length; index++) {
+        let newPromise: Promise<string> = new Promise((resolve, reject) => {
+          uploadFileToBlob(filesSelected![index], sasToken);
+          resolve('Correctly resolved');
+        });
+        promises.push(newPromise); 
+      }
+
+      Promise.allSettled(promises)
+        .then((values) => {
+          setUploading(false);
+          console.log("VALUES", values);
+        }
+      );
     }
 
-    setUploading(false);
     // prepare UI for results
     setBlobList(blobsInContainer);
 
