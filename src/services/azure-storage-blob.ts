@@ -1,20 +1,13 @@
-import { BlobServiceClient, ContainerClient } from '@azure/storage-blob';
+import { TransferProgressEvent } from '@azure/core-http';
+import { BlobServiceClient, BlockBlobParallelUploadOptions, ContainerClient } from '@azure/storage-blob';
 
-// THIS IS SAMPLE CODE ONLY - DON'T STORE TOKEN IN PRODUCTION CODE
-// const sasToken = getSasToken() || process.env.REACT_APP_SAS_TOKEN; // Fill string with your SAS token
 const containerName = process.env.REACT_APP_BLOB_CONTAINER_NAME || "bc-durablefunction-poc";
-const storageAccountName = process.env.REACT_APP_STORAGE_ACCOUNT || "sadurablefunctionpoc"; // Fill string with your Storage resource name
-// </snippet_package>
+const storageAccountName = process.env.REACT_APP_STORAGE_ACCOUNT || "sadurablefunctionpoc";
 
-// <snippet_isStorageConfigured>
-// Feature flag - disable storage feature to app if not configured
 export const isStorageConfigured = (sasToken: string) => {
   return (!storageAccountName || !sasToken) ? false : true;
 }
-// </snippet_isStorageConfigured>
 
-// <snippet_getBlobsInContainer>
-// return list of blobs in container to display
 const getBlobsInContainer = async (containerClient: ContainerClient) => {
   const returnedBlobUrls: string[] = [];
 
@@ -29,49 +22,45 @@ const getBlobsInContainer = async (containerClient: ContainerClient) => {
 
   return returnedBlobUrls;
 }
-// </snippet_getBlobsInContainer>
 
-// <snippet_createBlobInContainer>
-const createBlobInContainer = async (containerClient: ContainerClient, file: File) => {
-  
-  // create blobClient for container
+const createBlobInContainer = async (containerClient: ContainerClient, file: File, setProgress: any) => {
+  const { name, size } = file;
   const blobClient = containerClient.getBlockBlobClient(file.name);
 
-  // set mimetype as determined from browser with file upload control
-  const options = { blobHTTPHeaders: { blobContentType: file.type } };
-
-  // upload file
-  //await blobClient.uploadBrowserData(file, options);
+  const options: BlockBlobParallelUploadOptions = { 
+    blobHTTPHeaders: { 
+      blobContentType: file.type 
+    }, 
+    onProgress: (transfer: TransferProgressEvent) => {
+      const { loadedBytes } = transfer;
+      const progress = parseInt(((loadedBytes / size) * 100).toString(), 10);
+      setProgress(progress);
+      return console.log(`File: ${name}, progress: ${progress}`);
+    }
+  };
+  
   try {
     await blobClient.uploadData(file, options);
   } catch(ex) {
     console.log('SAS Token has expired', ex);
   }
 }
-// </snippet_createBlobInContainer>
 
-// <snippet_uploadFileToBlob>
-const uploadFileToBlob = async (file: File | null, sasToken: string): Promise<string[]> => {
+const uploadFileToBlob = async (file: File | null, sasToken: string, setProgress: any): Promise<string[]> => {
   if (!file) return [];
 
-  // get BlobService = notice `?` is pulled out of sasToken - if created in Azure portal
   const blobService = new BlobServiceClient(
     `https://${storageAccountName}.blob.core.windows.net/?${sasToken}`
   );
 
-  // get Container - full public read access
   const containerClient: ContainerClient = blobService.getContainerClient(containerName);
   await containerClient.createIfNotExists({
     access: 'container',
   });
 
-  // upload file
-  await createBlobInContainer(containerClient, file);
+  await createBlobInContainer(containerClient, file, setProgress);
 
-  // get list of blobs in container
   return getBlobsInContainer(containerClient);
 };
-// </snippet_uploadFileToBlob>
 
 export default uploadFileToBlob;
-

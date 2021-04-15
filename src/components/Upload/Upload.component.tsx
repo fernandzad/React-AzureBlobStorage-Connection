@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-import { Button, Container, Row, Col, Form, Alert } from 'react-bootstrap';
+import { Container, Row, Col, Alert, ProgressBar } from 'react-bootstrap';
 
 import uploadFileToBlob, { isStorageConfigured } from '../../services/azure-storage-blob';
 import { getSasToken } from '../../services/SasTokenGenerator';
@@ -9,18 +9,20 @@ import { Response } from '../../services/types/SasTokenGenerator.types';
 import { DisplayForm } from '../DisplayForm';
 import { AssetList } from '../AssetList';
 
-const App: React.FC = () => {
+const Upload: React.FC = () => {
   // all blobs in container
   const [blobList, setBlobList] = useState<string[]>([]);
   const [sasToken, setSasToken] = useState<string>('');
   // current file to upload into container
   const [filesSelected, setFilesSelected] = useState<FileList | null>(null);
-  const [fileName, setFileName] = useState<string[]>([]);
+  const [fileNames, setFileNames] = useState<string[]>([]);
   const [isDraft, setIsDraft] = useState<boolean>(false);
   // UI/form management
   const [storageConfigured, setStorageConfigured] = useState<boolean>(false);
   const [uploading, setUploading] = useState(false);
   const [inputKey, setInputKey] = useState(Math.random().toString(36));
+
+  const [progress, setProgress] = useState<number>(0);
 
   useEffect(() => {
     const retrieveSasToken = async () => {
@@ -33,14 +35,13 @@ const App: React.FC = () => {
   }, []);
 
   const onFileChange = (files: FileList | null) => {
-    // capture file into state
-    let fileNames:string[] = [];
+    let names: string[] = [];
     if (files != null) {
       setFilesSelected(files);
       for (let index = 0; index < files.length; index++) {
-        fileNames.push(`${files[index].name} `);
+        names.push(`${files[index].name} `);
       }
-      setFileName(fileNames);
+      setFileNames(names);
 
       setIsDraft(true);
 
@@ -48,7 +49,7 @@ const App: React.FC = () => {
         const metadata = {
           status: 'draft'
         }
-        const rawResponse = await fetch(process.env.REACT_APP_DRAFT_ENDPOINT || '', {
+        await fetch(process.env.REACT_APP_DRAFT_ENDPOINT || '', {
           method: 'POST',
           headers: {
             'Accept': 'application/json',
@@ -56,7 +57,6 @@ const App: React.FC = () => {
           },
           body: JSON.stringify(metadata)
         });
-        // const content = await rawResponse.json();
       };
       setFileAsDraftCosmosDB();
       
@@ -68,21 +68,13 @@ const App: React.FC = () => {
 
   const onFileUpload = async () => {
     setUploading(true);
-
-    // VERSION FOR SYNCHRONOUS UPLOADING
-    // const blobsInContainer: string[] = [];
-    // for (let index = 0; index < filesSelected!.length; index++) {
-    //   let response: string[] = await uploadFileToBlob(filesSelected![index], sasToken);
-    //   blobsInContainer.push(response[0]);
-    // }
-
     let promises : Promise<string>[] = [];
     const blobsInContainer: string[] = [];
     if(filesSelected !== null)
     {
       for (let index = 0; index < filesSelected!.length; index++) {
         let newPromise: Promise<string> = new Promise((resolve, reject) => {
-          uploadFileToBlob(filesSelected![index], sasToken);
+          uploadFileToBlob(filesSelected![index], sasToken, setProgress);
           resolve('Correctly resolved');
         });
         promises.push(newPromise); 
@@ -90,16 +82,13 @@ const App: React.FC = () => {
 
       Promise.allSettled(promises)
         .then((values) => {
-          setUploading(false);
           console.log("VALUES", values);
         }
       );
     }
 
-    // prepare UI for results
     setBlobList(blobsInContainer);
 
-    // reset state/form
     setFilesSelected(null);
     setInputKey(Math.random().toString(36));
   };
@@ -108,13 +97,18 @@ const App: React.FC = () => {
     <Container className="mt-5">
       <Row>
         <Col>
-          <h1>Upload Asset to Wonderland</h1>
+          <h1>Upload Asset to MAM</h1>
           <br/>
-          {isDraft && <Alert variant="success">Draft!</Alert>}
-          <br />
-          {storageConfigured && !uploading && <DisplayForm fileName={fileName} 
+          {isDraft && <Alert variant="success">The Files were successfully Drafted</Alert>} 
+          <br/>
+          {storageConfigured && <DisplayForm fileNames={fileNames}
             inputKey={inputKey} onFileChange={onFileChange} onFileUpload={onFileUpload}/>}
-          {storageConfigured && uploading && <Alert variant="warning">Uploading...</Alert>}
+        </Col>
+      </Row>
+      <Row>
+        <Col>
+          <br/>
+          {uploading && <ProgressBar animated now={progress} label={`${progress}%`} />}
         </Col>
       </Row>
       <Row>
@@ -128,6 +122,6 @@ const App: React.FC = () => {
   );
 };
 
-export default App;
+export default Upload;
 
 
