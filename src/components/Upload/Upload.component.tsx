@@ -23,7 +23,19 @@ const Upload: React.FC = () => {
 
   const [progress, setProgress] = useState<number>(0);
 
-  useEffect(() => {
+  // useEffect(() => {
+  //   const retrieveSasToken = async () => {
+  //     const response: Response = await getSasToken();
+  //     localStorage.setItem(SASTOKEN, response.Token);
+
+  //     setStorageConfigured(isStorageConfigured(response.Token));
+  //   }
+
+  //   retrieveSasToken();
+  // }, []);
+
+  const onFileChange = (files: FileList | null) => {
+    setProgress(0);
     const retrieveSasToken = async () => {
       const response: Response = await getSasToken();
       localStorage.setItem(SASTOKEN, response.Token);
@@ -32,10 +44,7 @@ const Upload: React.FC = () => {
     }
 
     retrieveSasToken();
-  }, []);
 
-  const onFileChange = (files: FileList | null) => {
-    setProgress(0);
     let names: string[] = [];
     if (files != null) {
       setFilesSelected(files);
@@ -76,9 +85,10 @@ const Upload: React.FC = () => {
     if(filesSelected !== null)
     {
       for (let index = 0; index < filesSelected!.length; index++) {
-        let newPromise: Promise<string> = new Promise((resolve, reject) => {
+        let newPromise: Promise<string> = new Promise(async (resolve, reject) => {
           resolve('Correctly resolved');
-          uploadFileToBlob(filesSelected![index], sasToken, setProgress);
+          const tempBlob: string[] = await uploadFileToBlob(filesSelected![index], sasToken, setProgress);
+          blobsInContainer.push(...tempBlob);
         });
         promises.push(newPromise); 
       }
@@ -96,8 +106,8 @@ const Upload: React.FC = () => {
           <br/>
           {isDraft && <Alert variant="success">The Files were successfully Drafted</Alert>} 
           <br/>
-          {storageConfigured && <DisplayForm fileNames={fileNames}
-            onFileChange={onFileChange} onFileUpload={onFileUpload} />}
+          <DisplayForm fileNames={fileNames}
+            onFileChange={onFileChange} onFileUpload={onFileUpload} />
         </Col>
       </Row>
       <Row>
@@ -108,8 +118,7 @@ const Upload: React.FC = () => {
       </Row>
       <Row>
         <Col>
-          {storageConfigured && blobList.length > 0 && <AssetList blobList={blobList}/> }
-          {!storageConfigured && <div>Storage is not configured.</div>}
+          { storageConfigured && blobList.length > 0 && <AssetList blobList={blobList}/> }
         </Col>
       </Row>
       <hr />

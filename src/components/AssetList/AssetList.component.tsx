@@ -17,12 +17,8 @@ const AssetList: React.FC<ContainerItemsProps> = ({ blobList }: ContainerItemsPr
 						<li key={item}>
 							<div>
 								<Card style={{ width: '18rem' }}>
-									<Card.Img variant="top" src={item} alt={item} />
 									<Card.Body>
-										<Card.Title></Card.Title>
-										<Card.Text>
-											{ Path.basename(item) }
-										</Card.Text>
+										<Card.Title>{ item }</Card.Title>
 									</Card.Body>
 								</Card>
 							</div>
