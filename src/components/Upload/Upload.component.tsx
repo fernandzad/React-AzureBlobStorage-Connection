@@ -9,25 +9,25 @@ import { Response } from '../../services/types/SasTokenGenerator.types';
 import { DisplayForm } from '../DisplayForm';
 import { AssetList } from '../AssetList';
 
+const SASTOKEN = "SASTOKEN";
+
 const Upload: React.FC = () => {
   // all blobs in container
   const [blobList, setBlobList] = useState<string[]>([]);
-  const [sasToken, setSasToken] = useState<string>('');
   // current file to upload into container
   const [filesSelected, setFilesSelected] = useState<FileList | null>(null);
   const [fileNames, setFileNames] = useState<string[]>([]);
   const [isDraft, setIsDraft] = useState<boolean>(false);
   // UI/form management
   const [storageConfigured, setStorageConfigured] = useState<boolean>(false);
-  const [uploading, setUploading] = useState(false);
-  const [inputKey, setInputKey] = useState(Math.random().toString(36));
 
   const [progress, setProgress] = useState<number>(0);
 
   useEffect(() => {
     const retrieveSasToken = async () => {
       const response: Response = await getSasToken();
-      setSasToken(response.Token);
+      localStorage.setItem(SASTOKEN, response.Token);
+
       setStorageConfigured(isStorageConfigured(response.Token));
     }
 
@@ -35,6 +35,7 @@ const Upload: React.FC = () => {
   }, []);
 
   const onFileChange = (files: FileList | null) => {
+    setProgress(0);
     let names: string[] = [];
     if (files != null) {
       setFilesSelected(files);
@@ -67,30 +68,24 @@ const Upload: React.FC = () => {
   };
 
   const onFileUpload = async () => {
-    setUploading(true);
+
     let promises : Promise<string>[] = [];
     const blobsInContainer: string[] = [];
+
+    const sasToken: string | null = localStorage.getItem(SASTOKEN);
     if(filesSelected !== null)
     {
       for (let index = 0; index < filesSelected!.length; index++) {
         let newPromise: Promise<string> = new Promise((resolve, reject) => {
-          uploadFileToBlob(filesSelected![index], sasToken, setProgress);
           resolve('Correctly resolved');
+          uploadFileToBlob(filesSelected![index], sasToken, setProgress);
         });
         promises.push(newPromise); 
       }
-
-      Promise.allSettled(promises)
-        .then((values) => {
-          console.log("VALUES", values);
-        }
-      );
+      await Promise.allSettled(promises);
     }
-
     setBlobList(blobsInContainer);
-
     setFilesSelected(null);
-    setInputKey(Math.random().toString(36));
   };
 
   return (
@@ -102,13 +97,13 @@ const Upload: React.FC = () => {
           {isDraft && <Alert variant="success">The Files were successfully Drafted</Alert>} 
           <br/>
           {storageConfigured && <DisplayForm fileNames={fileNames}
-            inputKey={inputKey} onFileChange={onFileChange} onFileUpload={onFileUpload}/>}
+            onFileChange={onFileChange} onFileUpload={onFileUpload} />}
         </Col>
       </Row>
       <Row>
         <Col>
           <br/>
-          {uploading && <ProgressBar animated now={progress} label={`${progress}%`} />}
+          {(progress !== 100 && progress !== 0) && <ProgressBar animated now={progress} label={`${progress}%`} />}
         </Col>
       </Row>
       <Row>

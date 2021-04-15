@@ -3,12 +3,11 @@ import { Container, Row, Form, Col, Button, Badge } from 'react-bootstrap';
 
 interface DisplayFormProps {
   fileNames: string[];
-  inputKey: string;
   onFileChange: (files: FileList | null) => void;
   onFileUpload: any;
 }
 
-const DisplayForm: React.FC<DisplayFormProps> = ({ fileNames, inputKey, onFileChange, onFileUpload }: DisplayFormProps) => {
+const DisplayForm: React.FC<DisplayFormProps> = ({ fileNames, onFileChange, onFileUpload }: DisplayFormProps) => {
 
   return (
     <Container>
@@ -21,8 +20,7 @@ const DisplayForm: React.FC<DisplayFormProps> = ({ fileNames, inputKey, onFileCh
             multiple
             type="file"
             id="fileMainInput" 
-            onChange={(e: { target: { files: FileList | null; }; }) => onFileChange(e.target.files)} 
-            key={inputKey || ''}>
+            onChange={(e: { target: { files: FileList | null; }; }) => onFileChange(e.target.files)} >
           </Form.File>
         </Col>
         {/* <Col xs={9}>

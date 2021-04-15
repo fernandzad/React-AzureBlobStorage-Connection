@@ -11,8 +11,6 @@ export const isStorageConfigured = (sasToken: string) => {
 const getBlobsInContainer = async (containerClient: ContainerClient) => {
   const returnedBlobUrls: string[] = [];
 
-  // get list of blobs in container
-  // eslint-disable-next-line
   for await (const blob of containerClient.listBlobsFlat()) {
     // if image is public, just construct URL
     returnedBlobUrls.push(
@@ -28,9 +26,9 @@ const createBlobInContainer = async (containerClient: ContainerClient, file: Fil
   const blobClient = containerClient.getBlockBlobClient(file.name);
 
   const options: BlockBlobParallelUploadOptions = { 
-    blobHTTPHeaders: { 
-      blobContentType: file.type 
-    }, 
+    blobHTTPHeaders: {
+      blobContentType: file.type
+    },
     onProgress: (transfer: TransferProgressEvent) => {
       const { loadedBytes } = transfer;
       const progress = parseInt(((loadedBytes / size) * 100).toString(), 10);
@@ -46,7 +44,7 @@ const createBlobInContainer = async (containerClient: ContainerClient, file: Fil
   }
 }
 
-const uploadFileToBlob = async (file: File | null, sasToken: string, setProgress: any): Promise<string[]> => {
+const uploadFileToBlob = async (file: File | null, sasToken: string | null, setProgress: any): Promise<string[]> => {
   if (!file) return [];
 
   const blobService = new BlobServiceClient(
