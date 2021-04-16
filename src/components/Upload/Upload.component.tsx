@@ -20,19 +20,9 @@ const Upload: React.FC = () => {
   const [isDraft, setIsDraft] = useState<boolean>(false);
   // UI/form management
   const [storageConfigured, setStorageConfigured] = useState<boolean>(false);
+  const [uploading, setUploading] = useState(false);
 
   const [progress, setProgress] = useState<number>(0);
-
-  // useEffect(() => {
-  //   const retrieveSasToken = async () => {
-  //     const response: Response = await getSasToken();
-  //     localStorage.setItem(SASTOKEN, response.Token);
-
-  //     setStorageConfigured(isStorageConfigured(response.Token));
-  //   }
-
-  //   retrieveSasToken();
-  // }, []);
 
   const onFileChange = (files: FileList | null) => {
     setProgress(0);
@@ -77,22 +67,27 @@ const Upload: React.FC = () => {
   };
 
   const onFileUpload = async () => {
-
+    setUploading(true);
     let promises : Promise<string>[] = [];
     const blobsInContainer: string[] = [];
-
     const sasToken: string | null = localStorage.getItem(SASTOKEN);
-    if(filesSelected !== null)
+    
+    if(filesSelected !== null && sasToken)
     {
-      for (let index = 0; index < filesSelected!.length; index++) {
-        let newPromise: Promise<string> = new Promise(async (resolve, reject) => {
-          resolve('Correctly resolved');
-          const tempBlob: string[] = await uploadFileToBlob(filesSelected![index], sasToken, setProgress);
-          blobsInContainer.push(...tempBlob);
-        });
-        promises.push(newPromise); 
-      }
-      await Promise.allSettled(promises);
+      const filesSelectedArray = Array.from(filesSelected);
+      filesSelectedArray.map((file: File) => {
+        if (file !== null) {
+          let newPromise: Promise<string> = new Promise(async (resolve, _) => {
+            const tempBlob: string[] = await uploadFileToBlob(file, sasToken, setProgress);
+            blobsInContainer.push(...tempBlob);
+            resolve('Correctly resolved');
+          });
+          promises.push(newPromise);
+        }
+      });
+      Promise.allSettled(promises).then(() => {
+        setUploading(false);
+      }).catch(() => setUploading(false));
     }
     setBlobList(blobsInContainer);
     setFilesSelected(null);
@@ -113,7 +108,7 @@ const Upload: React.FC = () => {
       <Row>
         <Col>
           <br/>
-          {(progress !== 100 && progress !== 0) && <ProgressBar animated now={progress} label={`${progress}%`} />}
+          { uploading && <ProgressBar animated now={progress} label={`${progress}%`} /> }
         </Col>
       </Row>
       <Row>
