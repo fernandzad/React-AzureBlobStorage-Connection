@@ -23,9 +23,6 @@ const DisplayForm: React.FC<DisplayFormProps> = ({ fileNames, onFileChange, onFi
             onChange={(e: { target: { files: FileList | null; }; }) => onFileChange(e.target.files)} >
           </Form.File>
         </Col>
-        {/* <Col xs={9}>
-          {fileNames.map(fileName => <><Badge pill variant="success">{fileName}</Badge>{' '}</>)}
-        </Col> */}
       </Row>
       <Row>
       </Row>

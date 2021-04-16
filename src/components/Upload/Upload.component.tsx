@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 
 import { Container, Row, Col, Alert, ProgressBar } from 'react-bootstrap';
 
@@ -8,10 +8,12 @@ import { Response } from '../../services/types/SasTokenGenerator.types';
 
 import { DisplayForm } from '../DisplayForm';
 import { AssetList } from '../AssetList';
+import useFileProgressContext from '../../store/progress/useProgressContext';
 
 const SASTOKEN = "SASTOKEN";
 
 const Upload: React.FC = () => {
+  const { filesProgress, setProgressFilesAction } = useFileProgressContext();
   // all blobs in container
   const [blobList, setBlobList] = useState<string[]>([]);
   // current file to upload into container
@@ -25,6 +27,8 @@ const Upload: React.FC = () => {
   const [progress, setProgress] = useState<number>(0);
 
   const onFileChange = (files: FileList | null) => {
+    console.log("FILEPROGRESS", filesProgress);
+    
     setProgress(0);
     const retrieveSasToken = async () => {
       const response: Response = await getSasToken();
